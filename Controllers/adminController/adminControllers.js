@@ -65,44 +65,103 @@ const loginAdmin = async (req, res) => {
     }
 };
 
-// This function handles the ADMIN'S FILE UPLOAD workflow
-// const createSong = async (req, res) => {
-//     const { title, artist, album } = req.body;
-//     try {
-//         if (!req.files || !req.files.songFile || !req.files.coverArt || !req.files.artistPic) {
-//             return res.status(400).json({ message: 'Song, cover art, and artist picture files are all required' });
-//         }
-//         // Upload all three files to Cloudinary in parallel for speed
-//         const [songResult, coverArtResult, artistPicResult] = await Promise.all([
-//             cloudinary.uploader.upload(req.files.songFile[0].path, { resource_type: "video" }),
-//             cloudinary.uploader.upload(req.files.coverArt[0].path, { resource_type: "image" }),
-//             cloudinary.uploader.upload(req.files.artistPic[0].path, { resource_type: "image" })
-//         ]);
 
-//         const song = new Song({
-//             title,
-//             artist,
-//             album,
-//             filePath: songResult.secure_url,
-//             coverArtPath: coverArtResult.secure_url,
-//             artistPic: artistPicResult.secure_url, // Save the artist pic URL
-//         });
-//         const createdSong = await song.save();
-//         res.status(201).json(createdSong);
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Server Error during file upload" });
-//     }
-// };
+// --- FUNCTION: Handles FILE UPLOAD from the admin ---
+const createSong = async (req, res) => {
+    const {  title, artist, album, language, genre, tags} = req.body;
+    
+    try {
+        // Check if all files are present
+        if (!req.files || !req.files.songFile || !req.files.coverArt || !req.files.artistPic) {
+            return res.status(400).json({ message: 'Song, cover art, and artist picture files are all required' });
+        }
+        
+        // Upload all three files to Cloudinary using buffers
+        const songResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { 
+                    resource_type: "video",
+                    folder: "songs" 
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.songFile[0].buffer);
+        });
+        
+        const coverArtResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { 
+                    folder: "cover_art" 
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.coverArt[0].buffer);
+        });
+        
+        const artistPicResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { 
+                    folder: "artist_pics" 
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.artistPic[0].buffer);
+        });
+
+        // Create new song document
+        const song = new Song({
+            title,
+            artist,
+            album,
+            language,       // ADDED
+            genre,          // ADDED
+            tags,           // ADDED
+            filePath: songResult.secure_url,
+            coverArtPath: coverArtResult.secure_url,
+            artistPic: artistPicResult.secure_url,
+        });
+        
+        // Save to database
+        const createdSong = await song.save();
+        
+        // Return success response
+        res.status(201).json(createdSong);
+    } catch (error) {
+        console.error("File upload error:", error);
+        res.status(500).json({ 
+            message: "Server Error during file upload: " + error.message 
+        });
+    }
+};
+
 
 // --- FUNCTION 2: Handles URL PASTING from the admin ---
 const createSongWithUrl = async (req, res) => {
-    const { title, artist, album, filePath, coverArtPath, artistPic } = req.body;
+    const { title, artist, album, filePath, coverArtPath, artistPic, language, genre, tags } = req.body; // ADDED NEW FIELDS
     try {
         if (!title || !filePath || !coverArtPath || !artistPic) {
             return res.status(400).json({ message: 'All URLs are required' });
         }
-        const song = new Song({ title, artist, album, filePath, coverArtPath, artistPic });
+        const song = new Song({ 
+            title, 
+            artist, 
+            album, 
+            filePath, 
+            coverArtPath, 
+            artistPic, 
+            language,   // ADDED
+            genre,      // ADDED
+            tags        // ADDED
+        });
         const createdSong = await song.save();
         res.status(201).json(createdSong);
     } catch (error) {
@@ -118,23 +177,20 @@ const approveSong = async (req, res) => {
             return res.status(404).json({ message: 'Pending song not found' });
         }
 
-        // THE FIX: Create the new Song by explicitly copying every field.
-        // This is the most reliable way to ensure all data, especially the Cloudinary URLs, is transferred.
         const newSong = new Song({
             title: pendingSong.title,
             artist: pendingSong.artist,
             album: pendingSong.album,
-            filePath: pendingSong.filePath,           // This ensures the song URL is copied
+            filePath: pendingSong.filePath,
             coverArtPath: pendingSong.coverArtPath,
-            artistPic: pendingSong.artistPic, // This ensures the image URL is copied
+            artistPic: pendingSong.artistPic,
+            language: pendingSong.language,   // ADDED
+            genre: pendingSong.genre,         // ADDED
+            tags: pendingSong.tags            // ADDED
         });
 
-        // Save the new, approved song to the main 'songs' collection
         await newSong.save();
-
-        // Finally, remove the song from the 'pendingSongs' collection
         await pendingSong.deleteOne();
-
         res.json({ message: 'Song approved and added to the library.' });
     } catch (error) {
         console.error("Error approving song:", error);
@@ -234,7 +290,7 @@ const changeUserRole = async (req, res) => {
 module.exports = {
     registerAdmin,
     loginAdmin,
-    // createSong,
+    createSong,
     getPendingSongs,
     approveSong,
     rejectSong,

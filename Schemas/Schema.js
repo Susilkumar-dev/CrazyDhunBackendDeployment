@@ -20,12 +20,20 @@ const SongSchema = new mongoose.Schema({
     coverArtPath: String,
     artistPic: String,
     viewCount: { type: Number, default: 0 },
-    mood: { type: String, enum: ['High Energy', 'Chill', 'Focus', 'Happy', 'Sad'], default: 'Happy' }, 
+    mood: { type: String, enum: ['High Energy', 'Chill', 'Focus', 'Happy', 'Sad'], default: 'Happy' },
+    // ADD THESE NEW FIELDS:
+    language: { type: String, default: '' },
+    genre: { type: String, default: '' },
+    tags: { type: String, default: '' }
 }, { timestamps: true });
 
 const PendingSongSchema = new mongoose.Schema({
     title: String, artist: String, album: String,
     filePath: String, coverArtPath: String, artistPic: String,
+    // ADD THESE NEW FIELDS:
+    language: { type: String, default: '' },
+    genre: { type: String, default: '' },
+    tags: { type: String, default: '' },
     submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

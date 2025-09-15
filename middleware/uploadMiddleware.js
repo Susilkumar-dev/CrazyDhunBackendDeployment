@@ -1,48 +1,55 @@
+
+
+
+
 const multer = require('multer');
+const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/");
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + "_" + file.originalname);
-    }
-});
+// Use memory storage for Cloudinary uploads
+const storage = multer.memoryStorage();
 
-// --- THIS IS THE CORRECTED FILE FILTER ---
+// File filter function
 const fileFilter = (req, file, cb) => {
-    // A more comprehensive list of allowed audio mimetypes
     const allowedAudio = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"];
-    
-    // A more comprehensive list of allowed image mimetypes
-    const allowedImage = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+    const allowedImage = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 
     if (file.fieldname === "songFile") {
         if (allowedAudio.includes(file.mimetype)) {
-            cb(null, true); // Accept the audio file
+            cb(null, true);
         } else {
-            // Reject with a specific error for audio
             cb(new Error("Invalid audio file type. Only MP3 and WAV are allowed."), false);
         }
     } else if (file.fieldname === "coverArt" || file.fieldname === "artistPic") {
         if (allowedImage.includes(file.mimetype)) {
-            cb(null, true); // Accept the image file
+            cb(null, true);
         } else {
-            // Reject with a specific error for images
-            cb(new Error("Invalid image file type. Only JPG and PNG are allowed."), false);
+            cb(new Error("Invalid image file type. Only JPG, PNG, and WEBP are allowed."), false);
         }
     } else {
-        // Reject any other unexpected files
         cb(new Error("Unexpected file field in form data."), false);
     }
 };
 
+// Multer upload configuration
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: { 
-        fileSize: 10 * 1024 * 1024 // 10MB file size limit for songs
+        fileSize: 20 * 1024 * 1024 // 20MB file size limit
     }
 });
 
-module.exports = upload; 
+// Error handling middleware
+const handleMulterError = (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ message: 'File too large. Maximum size is 20MB.' });
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+            return res.status(400).json({ message: 'Unexpected file field.' });
+        }
+    }
+    res.status(400).json({ message: err.message });
+};
+
+module.exports = { upload, handleMulterError };

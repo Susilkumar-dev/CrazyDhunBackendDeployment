@@ -8,6 +8,7 @@ const connectDB = require('./config/database/db');
 const publicRouter = require("./Routes/PublicRoutes/publicRoute");
 const adminRouter = require("./Routes/AdminRoutes/adminRoute");
 const userRouter = require("./Routes/UserRoutes/userRoute");
+const { handleMulterError } = require('./middleware/uploadMiddleware');
 
 //! Database connection
 connectDB();
@@ -18,6 +19,10 @@ const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+
+!// Add this after your other middleware
+app.use(handleMulterError);
 
 //! This makes the 'uploads' folder publicly accessible to serve your songs and images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

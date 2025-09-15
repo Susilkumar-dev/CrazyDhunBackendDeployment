@@ -60,16 +60,18 @@ const deleteUserAccount = async (req, res) => {
 
 // UPDATED: Function for a user to request adding a song
 const requestSong = async (req, res) => {
-    // THIS IS THE FIX: Add a safety check for req.user
     if (!req.user || !req.user.id) {
         return res.status(401).json({ message: "Not authorized. Please log in again." });
     }
 
-    const { title, artist, album, filePath, coverArtPath } = req.body;
+    const { title, artist, album, filePath, coverArtPath, language, genre, tags } = req.body; // ADDED NEW FIELDS
     try {
         await PendingSong.create({
             title, artist, album, filePath, coverArtPath,
-            submittedBy: req.user.id, // Now this is safe to use
+            language,   // ADDED
+            genre,      // ADDED
+            tags,       // ADDED
+            submittedBy: req.user.id,
         });
         res.status(201).json({ message: "Song submitted successfully! It is now awaiting admin approval." });
     } catch (error) {

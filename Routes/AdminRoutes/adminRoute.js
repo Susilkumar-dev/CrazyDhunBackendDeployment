@@ -1,25 +1,25 @@
 const express = require('express');
 const arouter = express.Router();
-const {  updateSong, deleteSong, getAllUsers, deleteUser, changeUserRole, loginAdmin, registerAdmin, getPendingSongs, rejectSong, approveSong, createSongWithUrl } = require('../../Controllers/adminController/adminControllers');
+const {  updateSong, deleteSong, getAllUsers, deleteUser, changeUserRole, loginAdmin, registerAdmin, getPendingSongs, rejectSong, approveSong, createSongWithUrl, createSong } = require('../../Controllers/adminController/adminControllers');
 const checkRole = require('../../auth/role/checkRole');
 
 const verifyToken = require("../../auth/role/authMiddleware");
-const upload = require('../../middleware/uploadMiddleware');
+const {upload} = require('../../middleware/uploadMiddleware');
 
 
 
-// Admin direct song creation
-// arouter.post(
-//     '/songs', // Kept it simple
-//     verifyToken,
-//     checkRole('admin'),
-//     upload.fields([
-//         { name: 'songFile', maxCount: 1 },
-//         { name: 'coverArt', maxCount: 1 },
-//         { name: 'artistPic', maxCount: 1 } // Add artistPic to multer
-//     ]),
-//     createSong
-// );
+// Admin song upload route
+arouter.post(
+    '/songs',
+    verifyToken,
+    checkRole('admin'),
+    upload.fields([
+        { name: 'songFile', maxCount: 1 },
+        { name: 'coverArt', maxCount: 1 },
+        { name: 'artistPic', maxCount: 1 }
+    ]),
+    createSong
+);
 
 // --- ROUTE 2: For the ADMIN to ADD BY URL ---
 arouter.post('/songs/add-by-url', verifyToken, checkRole('admin'), createSongWithUrl);

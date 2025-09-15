@@ -135,7 +135,14 @@ const loginUser = async (req, res) => {
 //! GET ALL SONGS (Public)
 const getAllSongs = async (req, res) => {
     try {
-        const songs = await Song.find({});
+        const { language, genre, mood } = req.query;
+        let filter = {};
+        
+        if (language) filter.language = language;
+        if (genre) filter.genre = genre;
+        if (mood) filter.mood = mood;
+        
+        const songs = await Song.find(filter);
         res.json(songs);
     } catch (error) {
         console.error(error);
@@ -161,6 +168,24 @@ const getRecommendedSongs = async (req, res) => {
     } catch (error) {
         console.error("Recommendation error:", error);
         res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+
+// Add a new function to get songs by language
+const getSongsByLanguage = async (req, res) => {
+    try {
+        const { language } = req.params;
+        const songs = await Song.find({ language: { $regex: new RegExp(`^${language}$`, "i") } });
+        
+        if (!songs || songs.length === 0) {
+            return res.status(404).json({ message: "No songs found for this language" });
+        }
+        
+        res.json(songs);
+    } catch (error) {
+        console.error("Error fetching songs by language:", error);
+        res.status(500).json({ message: "Server Error" });
     }
 };
 
@@ -200,4 +225,6 @@ const getSongsByArtist = async (req, res) => {
 };
 
 
-module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist };
+
+
+module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist,getSongsByLanguage };
