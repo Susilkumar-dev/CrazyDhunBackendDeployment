@@ -146,26 +146,31 @@ const createSong = async (req, res) => {
 
 // --- FUNCTION 2: Handles URL PASTING from the admin ---
 const createSongWithUrl = async (req, res) => {
-    const { title, artist, album, filePath, coverArtPath, artistPic, language, genre, tags } = req.body; // ADDED NEW FIELDS
+    const { title, artist, album, filePath, coverArtPath, artistPic, language, genre, tags, releaseDate } = req.body;
     try {
         if (!title || !filePath || !coverArtPath || !artistPic) {
             return res.status(400).json({ message: 'All URLs are required' });
         }
-        const song = new Song({ 
-            title, 
-            artist, 
-            album, 
-            filePath, 
-            coverArtPath, 
-            artistPic, 
-            language,   // ADDED
-            genre,      // ADDED
-            tags        // ADDED
+        
+        const song = new Song({
+            title,
+            artist,
+            album,
+            language,
+            genre,
+            tags,
+            releaseDate: releaseDate || null,
+            status: true,
+            filePath,
+            coverArtPath,
+            artistPic
         });
+        
         const createdSong = await song.save();
         res.status(201).json(createdSong);
     } catch (error) {
-        res.status(500).json({ message: "Server Error" });
+        console.error("Error creating song with URL:", error);
+        res.status(500).json({ message: "Server Error: " + error.message });
     }
 };
 
@@ -224,18 +229,25 @@ const rejectSong = async (req, res) => {
 
 // --- 5. GENERAL MANAGEMENT FUNCTIONS ---
 const updateSong = async (req, res) => {
-    const { title, artist, album } = req.body;
-    try {
-        const song = await Song.findById(req.params.id);
-        if (!song) return res.status(404).json({ message: 'Song not found' });
-        song.title = title || song.title;
-        song.artist = artist || song.artist;
-        song.album = album || song.album;
-        const updatedSong = await song.save();
-        res.json(updatedSong);
-    } catch (error) {
-        res.status(500).json({ message: "Server Error" });
-    }
+  const { title, artist, album, language, genre, tags, releaseDate, status } = req.body;
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: 'Song not found' });
+    
+    song.title = title || song.title;
+    song.artist = artist || song.artist;
+    song.album = album || song.album;
+    song.language = language || song.language;
+    song.genre = genre || song.genre;
+    song.tags = tags || song.tags;
+    song.releaseDate = releaseDate || song.releaseDate;
+    song.status = status !== undefined ? status : song.status;
+    
+    const updatedSong = await song.save();
+    res.json(updatedSong);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 const deleteSong = async (req, res) => {
@@ -287,6 +299,29 @@ const changeUserRole = async (req, res) => {
     }
 };
 
+const getAllSongs = async (req, res) => {
+  try {
+    const songs = await Song.find({});
+    res.json(songs);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error getting songs' });
+  }
+};
+
+const toggleSongStatus = async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: 'Song not found' });
+    
+    song.status = !song.status;
+    await song.save();
+    
+    res.json(song);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error toggling song status" });
+  }
+};
+
 module.exports = {
     registerAdmin,
     loginAdmin,
@@ -299,5 +334,7 @@ module.exports = {
     getAllUsers,
     deleteUser,
     changeUserRole,
-     createSongWithUrl, 
+    createSongWithUrl, 
+    getAllSongs,
+     toggleSongStatus
 };

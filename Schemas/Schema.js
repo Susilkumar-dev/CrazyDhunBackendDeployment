@@ -21,10 +21,11 @@ const SongSchema = new mongoose.Schema({
     artistPic: String,
     viewCount: { type: Number, default: 0 },
     mood: { type: String, enum: ['High Energy', 'Chill', 'Focus', 'Happy', 'Sad'], default: 'Happy' },
-    // ADD THESE NEW FIELDS:
     language: { type: String, default: '' },
     genre: { type: String, default: '' },
-    tags: { type: String, default: '' }
+    tags: { type: String, default: '' },
+    releaseDate: { type: Date }, // Add this field
+    status: { type: Boolean, default: true } // Add status field
 }, { timestamps: true });
 
 const PendingSongSchema = new mongoose.Schema({
