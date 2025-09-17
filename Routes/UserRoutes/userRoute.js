@@ -9,7 +9,7 @@ urouter.delete('/profile/delete', verifyToken, deleteUserAccount);
 urouter.put('/profile/picture', verifyToken, updateUserPicture);
 
 
-urouter.post('/songs/request', verifyToken, requestSong); // NEW ROUTE FOR USERS
+urouter.post('/songs/request', verifyToken, requestSong); 
 
 
 // --- NEW ROUTES FOR LIKED SONGS ---

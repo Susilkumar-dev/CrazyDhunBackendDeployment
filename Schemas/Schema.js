@@ -24,14 +24,13 @@ const SongSchema = new mongoose.Schema({
     language: { type: String, default: '' },
     genre: { type: String, default: '' },
     tags: { type: String, default: '' },
-    releaseDate: { type: Date }, // Add this field
-    status: { type: Boolean, default: true } // Add status field
+    releaseDate: { type: Date }, 
+    status: { type: Boolean, default: true } 
 }, { timestamps: true });
 
 const PendingSongSchema = new mongoose.Schema({
     title: String, artist: String, album: String,
     filePath: String, coverArtPath: String, artistPic: String,
-    // ADD THESE NEW FIELDS:
     language: { type: String, default: '' },
     genre: { type: String, default: '' },
     tags: { type: String, default: '' },

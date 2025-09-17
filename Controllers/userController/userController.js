@@ -5,7 +5,6 @@ const Playlist = require("../../Models/playlistModel/playlistModel.js");
 const PendingSong = require("../../Models/pendingModel/pendingSongModel.js");
 const bcrypt = require("bcrypt");
 
-// (getUserProfile, updateUserProfile, deleteUserAccount functions remain the same)
  //! GET USER PROFILE
 const getUserProfile = async (req, res) => {
     res.json(req.user);
@@ -58,7 +57,6 @@ const deleteUserAccount = async (req, res) => {
 
 // UPDATED: Function for a user to request adding a song
 const requestSong = async (req, res) => {
-    // THIS IS THE FIX: Add a safety check for req.user
     if (!req.user || !req.user.id) {
         return res.status(401).json({ message: "Not authorized. Please log in again." });
     }
@@ -67,7 +65,7 @@ const requestSong = async (req, res) => {
     try {
         await PendingSong.create({
             title, artist, album, filePath, coverArtPath,
-            submittedBy: req.user.id, // Now this is safe to use
+            submittedBy: req.user.id, 
         });
         res.status(201).json({ message: "Song submitted successfully! It is now awaiting admin approval." });
     } catch (error) {
@@ -184,7 +182,7 @@ const addSongToPlaylist = async (req, res) => {
     } catch (error) { res.status(500).json({ message: "Server Error" }); }
 };
 
-// --- NEW: Function to DELETE a playlist ---
+// ---  Function to DELETE a playlist ---
 const deletePlaylist = async (req, res) => {
     try {
         const playlist = await Playlist.findById(req.params.id);

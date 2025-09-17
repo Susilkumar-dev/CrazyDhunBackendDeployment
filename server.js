@@ -22,7 +22,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-!// Add this after your other middleware
 app.use(handleMulterError);
 
 //! This makes the 'uploads' folder publicly accessible to serve your songs and images

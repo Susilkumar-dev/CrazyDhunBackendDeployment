@@ -1,10 +1,9 @@
-// scripts/migrate-songs.js
+
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-// Adjust the path according to your project structure
+
 const connectDB = require('../config/database/db');
-// Adjust the path according to your project structure
 const Song = require('../Models/songModel/songModel');
 
 const migrateSongs = async () => {
@@ -18,7 +17,6 @@ const migrateSongs = async () => {
         
         // Update each song with a default language
         for (const song of songs) {
-            // You can set a default language or extract from album name
             song.language = "Unknown";
             await song.save();
             console.log(`Updated song: ${song.title}`);

@@ -1,8 +1,5 @@
 
 
-
-// --- 1. CORRECTED MODEL IMPORTS ---
-// --- 1. CORRECTED MODEL IMPORTS TO MATCH YOUR FOLDER STRUCTURE ---
 const Song = require('../../Models/songModel/songModel.js');
 const User = require('../../Models/userModel/userModel.js');
 const PendingSong = require('../../Models/pendingModel/pendingSongModel.js');
@@ -122,9 +119,9 @@ const createSong = async (req, res) => {
             title,
             artist,
             album,
-            language,       // ADDED
-            genre,          // ADDED
-            tags,           // ADDED
+            language,       
+            genre,         
+            tags,           
             filePath: songResult.secure_url,
             coverArtPath: coverArtResult.secure_url,
             artistPic: artistPicResult.secure_url,
@@ -174,7 +171,7 @@ const createSongWithUrl = async (req, res) => {
     }
 };
 
-// --- THIS IS THE CORRECTED APPROVAL FUNCTION ---
+// --- THIS IS THE APPROVAL FUNCTION ---
 const approveSong = async (req, res) => {
     try {
         const pendingSong = await PendingSong.findById(req.params.id);
@@ -189,9 +186,9 @@ const approveSong = async (req, res) => {
             filePath: pendingSong.filePath,
             coverArtPath: pendingSong.coverArtPath,
             artistPic: pendingSong.artistPic,
-            language: pendingSong.language,   // ADDED
-            genre: pendingSong.genre,         // ADDED
-            tags: pendingSong.tags            // ADDED
+            language: pendingSong.language,   
+            genre: pendingSong.genre,         
+            tags: pendingSong.tags            
         });
 
         await newSong.save();
@@ -203,7 +200,6 @@ const approveSong = async (req, res) => {
     }
 };
 
-// (All other functions remain the same)
 const getPendingSongs = async (req, res) => {
     try {
         const pendingSongs = await PendingSong.find({}).populate('submittedBy', 'username');

@@ -150,7 +150,7 @@ const getAllSongs = async (req, res) => {
     }
 };
 
-// --- NEW: Function to get recommended songs ---
+// ---  Function to get recommended songs ---
 const getRecommendedSongs = async (req, res) => {
     try {
         const { songId } = req.params;
@@ -190,19 +190,7 @@ const getSongsByLanguage = async (req, res) => {
 };
 
 
-// / --- NEW: Function to get all songs by a specific artist ---
-// const getSongsByArtist = async (req, res) => {
-//     try {
-//         const artistName = req.params.artistName;
-//         const songs = await Song.find({ artist: artistName });
-//         if (!songs || songs.length === 0) {
-//             return res.status(404).json({ message: "No songs found for this artist" });
-//         }
-//         res.json(songs);
-//     } catch (error) {
-//         res.status(500).json({ message: "Server Error" });
-//     }
-// };
+
 
 const getSongsByArtist = async (req, res) => {
   try {
