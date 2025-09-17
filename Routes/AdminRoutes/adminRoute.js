@@ -3,8 +3,9 @@ const arouter = express.Router();
 const {  
   updateSong, deleteSong, getAllUsers, deleteUser, changeUserRole, 
   loginAdmin, registerAdmin, getPendingSongs, rejectSong, approveSong, 
-  createSongWithUrl, createSong, toggleSongStatus, getAllSongs 
+  createSongWithUrl, createSong, toggleSongStatus, getAllSongs // ✅ Add getAllSongs here
 } = require('../../Controllers/adminController/adminControllers'); 
+const checkRole = require('../../auth/role/checkRole');
 const verifyToken = require("../../auth/role/authMiddleware");
 const { upload } = require('../../middleware/uploadMiddleware');
 
