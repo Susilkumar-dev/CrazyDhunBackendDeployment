@@ -9,7 +9,10 @@ const UserSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     bio: { type: String, default: '' },
     profilePicture: { type: String, default: '' },
-    likedSongs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Song' }]
+    likedSongs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Song' }],
+    resetOtp: String,
+    resetOtpExpiry: Date
+
 }, { timestamps: true });
 
 const SongSchema = new mongoose.Schema({
