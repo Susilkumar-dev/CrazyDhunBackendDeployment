@@ -28,9 +28,20 @@ arouter.post('/songs/add-by-url', verifyToken, checkRole('admin'), createSongWit
 
 // Song management routes
 arouter.get('/songs', verifyToken, checkRole('admin'), getAllSongs); 
-arouter.put('/songs/:id', verifyToken, checkRole('admin'), updateSong);
+// arouter.put('/songs/:id', verifyToken, checkRole('admin'), updateSong);
 arouter.delete('/songs/:id', verifyToken, checkRole('admin'), deleteSong);
 arouter.patch('/songs/:id/status', verifyToken, checkRole('admin'), toggleSongStatus);
+
+arouter.put('/songs/:id', 
+  verifyToken, 
+  checkRole('admin'), 
+  upload.fields([
+    { name: 'songFile', maxCount: 1 },
+    { name: 'coverArt', maxCount: 1 },
+    { name: 'artistPic', maxCount: 1 }
+  ]), 
+  updateSong
+);
 
 // Admin approval workflow
 arouter.get('/songs/pending', verifyToken, checkRole('admin'), getPendingSongs);

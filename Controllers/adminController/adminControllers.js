@@ -226,23 +226,78 @@ const rejectSong = async (req, res) => {
 // --- 5. GENERAL MANAGEMENT FUNCTIONS ---
 const updateSong = async (req, res) => {
   const { title, artist, album, language, genre, tags, releaseDate, status } = req.body;
+  
   try {
     const song = await Song.findById(req.params.id);
     if (!song) return res.status(404).json({ message: 'Song not found' });
     
+    // Handle file uploads if provided
+    if (req.files) {
+      if (req.files.songFile) {
+        const songResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { 
+              resource_type: "video",
+              folder: "songs" 
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(req.files.songFile[0].buffer);
+        });
+        song.filePath = songResult.secure_url;
+      }
+      
+      if (req.files.coverArt) {
+        const coverArtResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { 
+              folder: "cover_art" 
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(req.files.coverArt[0].buffer);
+        });
+        song.coverArtPath = coverArtResult.secure_url;
+      }
+      
+      if (req.files.artistPic) {
+        const artistPicResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { 
+              folder: "artist_pics" 
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          stream.end(req.files.artistPic[0].buffer);
+        });
+        song.artistPic = artistPicResult.secure_url;
+      }
+    }
+    
+    // Update fields
     song.title = title || song.title;
     song.artist = artist || song.artist;
     song.album = album || song.album;
     song.language = language || song.language;
     song.genre = genre || song.genre;
-    song.tags = tags || song.tags;
+    song.tags = tags ? tags.split(',').map(tag => tag.trim()) : song.tags;
     song.releaseDate = releaseDate || song.releaseDate;
     song.status = status !== undefined ? status : song.status;
     
     const updatedSong = await song.save();
     res.json(updatedSong);
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error("Error updating song:", error);
+    res.status(500).json({ message: "Server Error: " + error.message });
   }
 };
 

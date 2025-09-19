@@ -28,10 +28,7 @@ urouter.put('/playlists/:id', verifyToken, updatePlaylist);
 
 //---forgot password----
 // In your userRoute.js, add a middleware to log requests
-urouter.post('/forgot-password', (req, res, next) => {
-  console.log('Forgot password route hit:', new Date().toISOString());
-  next();
-}, requestPasswordReset);
+urouter.post('/forgot-password',requestPasswordReset);
 urouter.post('/reset-password', resetPassword);
 
 
