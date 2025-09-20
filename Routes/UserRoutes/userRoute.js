@@ -1,7 +1,8 @@
 const express = require('express');
 const urouter = express.Router();
-const { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong, getUserPlaylists, createPlaylist, getPlaylistById, addSongToPlaylist, deletePlaylist, updateUserPicture, requestPasswordReset, resetPassword, updatePlaylist } = require('../../Controllers/userController/userController');
+const { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong, getUserPlaylists, createPlaylist, getPlaylistById, addSongToPlaylist, deletePlaylist, updateUserPicture,  updatePlaylist, } = require('../../Controllers/userController/userController');
 const verifyToken = require('../../auth/role/authMiddleware');
+const transporter = require('../../config/Email.js');
 
 urouter.get('/profile', verifyToken, getUserProfile);
 urouter.put('/profile/update', verifyToken, updateUserProfile);
@@ -26,10 +27,9 @@ urouter.post('/playlists/add-song', verifyToken, addSongToPlaylist);
 urouter.delete('/playlists/:id', verifyToken, deletePlaylist);
 urouter.put('/playlists/:id', verifyToken, updatePlaylist);
 
-//---forgot password----
-// In your userRoute.js, add a middleware to log requests
-urouter.post('/forgot-password',requestPasswordReset);
-urouter.post('/reset-password', resetPassword);
+
+
+
 
 
 module.exports = urouter;

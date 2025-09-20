@@ -132,6 +132,10 @@ const loginUser = async (req, res) => {
     }
 };
 
+
+
+
+
 //! GET ALL SONGS (Public)
 const getAllSongs = async (req, res) => {
     try {
@@ -214,5 +218,112 @@ const getSongsByArtist = async (req, res) => {
 
 
 
+//! FORGOT PASSWORD - Send reset OTP
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    
+    try {
+        // Security: Don't reveal if email exists or not
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(200).json({ 
+                message: "If the email exists, a password reset OTP has been sent" 
+            });
+        }
 
-module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist,getSongsByLanguage };
+        // Generate 6-digit OTP
+        const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        const resetOtpExpiry = Date.now() + 3600000; // 1 hour
+        
+        user.resetOtp = resetOtp;
+        user.resetOtpExpiry = resetOtpExpiry;
+        await user.save();
+
+        // Send email with OTP
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Dhun Music - Password Reset OTP',
+            text: `Your password reset OTP is: ${resetOtp}. This OTP will expire in 1 hour.`,
+        };
+
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) {
+                console.error("Email send error:", error);
+                return res.status(500).json({ message: "Error sending reset email" });
+            }
+            
+            res.status(200).json({ 
+                message: "If the email exists, a password reset OTP has been sent",
+                email: user.email // Send back email for the reset password page
+            });
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+//! VERIFY RESET OTP
+const verifyResetOtp = async (req, res) => {
+    const { email, otp } = req.body;
+    
+    try {
+        const user = await User.findOne({ 
+            email, 
+            resetOtpExpiry: { $gt: Date.now() } 
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        if (user.resetOtp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP" });
+        }
+
+        // OTP is valid
+        res.status(200).json({ 
+            message: "OTP verified successfully",
+            email: user.email
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+//! RESET PASSWORD
+const resetPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    
+    try {
+        const user = await User.findOne({ 
+            email, 
+            resetOtp: otp,
+            resetOtpExpiry: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        // Update password
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.resetOtp = undefined;
+        user.resetOtpExpiry = undefined;
+        
+        await user.save();
+
+        res.status(200).json({ message: "Password reset successfully" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+
+module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist,getSongsByLanguage ,  resetPassword,verifyResetOtp,forgotPassword };

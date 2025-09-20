@@ -228,75 +228,7 @@ const updateUserPicture = async (req, res) => {
     }
 };
 
-// In requestPasswordReset function
-const requestPasswordReset = async (req, res) => {
-  const { email } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOtp = await bcrypt.hash(otp, 10);
-
-    // Save OTP and expiry
-    user.resetOtp = hashedOtp;
-    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
-    await user.save();
-
-    // Send email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Password Reset OTP",
-      text: `Your OTP is: ${otp}. It will expire in 10 minutes.`,
-    };
-
-    transporter.sendMail(mailOptions, (error) => {
-      if (error) {
-        console.error('Email error:', error);
-        return res.status(500).json({ message: "Error sending email" });
-      }
-      res.json({ message: "OTP sent to email" });
-    });
-  } catch (err) {
-    console.error('Reset error:', err);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
-
-// Reset Password using OTP
-const resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    if (!user.resetOtp || !user.resetOtpExpiry) {
-      return res.status(400).json({ message: "No OTP request found" });
-    }
-
-    if (Date.now() > user.resetOtpExpiry) {
-      return res.status(400).json({ message: "OTP expired" });
-    }
-
-    const isMatch = await bcrypt.compare(otp, user.resetOtp);
-    if (!isMatch) return res.status(400).json({ message: "Invalid OTP" });
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    user.resetOtp = undefined;
-    user.resetOtpExpiry = undefined;
-    
-    await user.save();
-
-    res.json({ message: "Password reset successful" });
-  } catch (err) {
-    console.error('Reset error:', err);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
 
 const updatePlaylist = async (req, res) => {
   try {
@@ -336,4 +268,4 @@ const updatePlaylist = async (req, res) => {
   }
 };
 
-module.exports = { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong,createPlaylist, getUserPlaylists, getPlaylistById, addSongToPlaylist,deletePlaylist,  updatePlaylist ,  updateUserPicture,resetPassword , requestPasswordReset };
+module.exports = { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong,createPlaylist, getUserPlaylists, getPlaylistById, addSongToPlaylist,deletePlaylist,  updatePlaylist ,  updateUserPicture, };
