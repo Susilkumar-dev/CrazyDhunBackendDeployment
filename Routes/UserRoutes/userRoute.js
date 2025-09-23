@@ -2,7 +2,7 @@ const express = require('express');
 const urouter = express.Router();
 const { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong, getUserPlaylists, createPlaylist, getPlaylistById, addSongToPlaylist, deletePlaylist, updateUserPicture,  updatePlaylist, } = require('../../Controllers/userController/userController');
 const verifyToken = require('../../auth/role/authMiddleware');
-const transporter = require('../../config/Email.js');
+
 
 urouter.get('/profile', verifyToken, getUserProfile);
 urouter.put('/profile/update', verifyToken, updateUserProfile);
