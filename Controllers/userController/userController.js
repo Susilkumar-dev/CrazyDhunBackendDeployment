@@ -5,6 +5,8 @@ const Playlist = require("../../Models/playlistModel/playlistModel.js");
 const PendingSong = require("../../Models/pendingModel/pendingSongModel.js");
 const transporter = require('../../config/Email.js');
 const bcrypt = require("bcrypt");
+const cloudinary = require('../../config/cloudinary.js');
+
 
  //! GET USER PROFILE
 const getUserProfile = async (req, res) => {
@@ -62,19 +64,72 @@ const requestSong = async (req, res) => {
         return res.status(401).json({ message: "Not authorized. Please log in again." });
     }
 
-    const { title, artist, album, filePath, coverArtPath } = req.body;
+    // ✅ 1. Check if files are present, just like the admin controller
+    if (!req.files || !req.files.songFile || !req.files.coverArt || !req.files.artistPic) {
+        return res.status(400).json({ message: 'Song, cover art, and artist picture files are all required' });
+    }
+
+    const { title, artist, album, language, genre, tags } = req.body;
+
     try {
-        await PendingSong.create({
-            title, artist, album, filePath, coverArtPath,
-            submittedBy: req.user.id, 
+        // ✅ 2. Upload files to Cloudinary (same logic as admin function)
+        const songResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                {
+                    resource_type: "video",
+                    folder: "user_pending_songs" // Optional: Use a different folder for user submissions
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.songFile[0].buffer);
         });
+
+        const coverArtResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: "user_pending_cover_art" },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.coverArt[0].buffer);
+        });
+
+        const artistPicResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: "user_pending_artist_pics" },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.files.artistPic[0].buffer);
+        });
+
+        // ✅ 3. Create a new pending song with the Cloudinary URLs
+        await PendingSong.create({
+            title,
+            artist,
+            album,
+            language,
+            genre,
+            tags,
+            filePath: songResult.secure_url,
+            coverArtPath: coverArtResult.secure_url,
+            artistPic: artistPicResult.secure_url,
+            submittedBy: req.user.id,
+        });
+
         res.status(201).json({ message: "Song submitted successfully! It is now awaiting admin approval." });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        console.error("Song request error:", error);
+        res.status(500).json({ message: "Server Error during file upload: " + error.message });
     }
 };
-
 // --- NEW FUNCTIONS FOR LIKED SONGS ---
 
 // GET a user's liked songs
@@ -269,3 +324,6 @@ const updatePlaylist = async (req, res) => {
 };
 
 module.exports = { getUserProfile, updateUserProfile, deleteUserAccount, requestSong, getLikedSongs, likeSong, unlikeSong,createPlaylist, getUserPlaylists, getPlaylistById, addSongToPlaylist,deletePlaylist,  updatePlaylist ,  updateUserPicture, };
+
+
+
