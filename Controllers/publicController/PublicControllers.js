@@ -24,44 +24,74 @@ const transporter = nodemailer.createTransport({
 //! REGISTER USER (Sends OTP)
 const registerUser = async (req, res) => {
     const { username, email, password } = req.body;
+    
     try {
+        // Validate input
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        // Check if user already exists
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res.status(400).json({ message: "User with this email already exists" });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+        // Generate OTP and hash password
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedPassword = await bcrypt.hash(password, 10);
         const hashedOtp = await bcrypt.hash(otp, 10);
 
-        await User.create({
+        // Create user
+        const newUser = await User.create({
             username,
             email,
             password: hashedPassword,
             otp: hashedOtp,
             isVerified: false,
         });
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Your OTP for Dhun Music Verification',
-            text: `Welcome to Dhun! Your One-Time Password is: ${otp}`,
-        };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error("Email send error:", error); 
-                return res.status(500).json({ message: "Error sending OTP email" });
-            }
-            console.log("Email sent: " + info.response);
-            res.status(201).json({ message: "Registration successful, please check your email for OTP." });
+        console.log(`OTP for ${email}: ${otp}`); // For testing
+
+        // Try to send email (but don't fail registration if email fails)
+        try {
+            const mailOptions = {
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: 'Your OTP for Dhun Music Verification',
+                text: `Welcome to Dhun! Your One-Time Password is: ${otp}`,
+            };
+
+            await transporter.sendMail(mailOptions);
+            console.log("OTP email sent successfully");
+        } catch (emailError) {
+            console.error("Email sending failed, but user registered:", emailError.message);
+            // Continue with registration even if email fails
+        }
+
+        res.status(201).json({ 
+            message: "Registration successful! Please check your email for OTP.",
+            email: newUser.email
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        console.error("Registration error details:", error);
+        
+        // More specific error messages
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: "Validation error: " + error.message });
+        }
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "User with this email already exists" });
+        }
+        
+        res.status(500).json({ 
+            message: "Registration failed. Please try again.",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
+
 
 //! VERIFY OTP
 const verifyOtp = async (req, res) => {
