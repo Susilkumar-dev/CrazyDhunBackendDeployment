@@ -326,21 +326,4 @@ const resetPassword = async (req, res) => {
 };
 
 
-
-//! GET TRENDING SONGS (Public)
-const getTrendingSongs = async (req, res) => {
-    try {
-        // Get top 10 songs by viewCount
-        const trendingSongs = await Song.find()
-            .sort({ viewCount: -1 })
-            .limit(10);
-        
-        res.json(trendingSongs);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
-    }
-};
-
-
-module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist,getSongsByLanguage ,  resetPassword,verifyResetOtp,forgotPassword  , getTrendingSongs };
+module.exports = { registerUser, verifyOtp, loginUser, getAllSongs,getRecommendedSongs,getSongsByArtist,getSongsByLanguage ,  resetPassword,verifyResetOtp,forgotPassword };
