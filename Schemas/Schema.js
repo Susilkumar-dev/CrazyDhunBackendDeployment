@@ -23,7 +23,7 @@ const SongSchema = new mongoose.Schema({
     coverArtPath: String,
     artistPic: String,
     viewCount: { type: Number, default: 0 },
-    mood: { type: String, enum: ['High Energy', 'Chill', 'Focus', 'Happy', 'Sad'], default: 'Happy' },
+    mood: { type: String, enum: ['High Energy', 'Chill', 'Focus', 'Happy', 'Sad'], default: '' },
     language: { type: String, default: '' },
     genre: { type: String, default: '' },
     tags: { type: String, default: '' },
