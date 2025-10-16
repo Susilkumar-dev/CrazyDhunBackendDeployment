@@ -22,17 +22,24 @@ const transporter = nodemailer.createTransport({
 
 
 //! REGISTER USER (Sends OTP)
+//! REGISTER USER (Sends OTP)
 const registerUser = async (req, res) => {
     const { username, email, password } = req.body;
+    
+    console.log("📧 Registration attempt:", { username, email });
+    
     try {
         const userExists = await User.findOne({ email });
         if (userExists) {
+            console.log("❌ User already exists:", email);
             return res.status(400).json({ message: "User with this email already exists" });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedPassword = await bcrypt.hash(password, 10);
         const hashedOtp = await bcrypt.hash(otp, 10);
+
+        console.log("📨 Sending OTP email...");
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -41,20 +48,9 @@ const registerUser = async (req, res) => {
             text: `Welcome to Dhun! Your One-Time Password is: ${otp}`,
         };
 
-        // Use a Promise-based approach for cleaner async/await handling
-        await new Promise((resolve, reject) => {
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.error("Email send error:", error);
-                    reject(new Error("Error sending OTP email. Please try again."));
-                } else {
-                    console.log("Email sent: " + info.response);
-                    resolve(info);
-                }
-            });
-        });
+        await transporter.sendMail(mailOptions);
+        console.log("✅ OTP email sent successfully");
 
-        // Only create the user if the email was successfully sent
         await User.create({
             username,
             email,
@@ -63,15 +59,14 @@ const registerUser = async (req, res) => {
             isVerified: false,
         });
 
+        console.log("✅ User created in database");
         res.status(201).json({ message: "Registration successful, please check your email for OTP." });
 
     } catch (error) {
-        // Catch errors from `sendMail` promise or `User.create`
-        console.error("Registration process error:", error);
+        console.error("❌ Registration error:", error);
         res.status(500).json({ message: error.message || "Server Error" });
     }
 };
-
 //! VERIFY OTP
 const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
@@ -228,13 +223,14 @@ const getSongsByArtist = async (req, res) => {
 
 
 //! FORGOT PASSWORD - Send reset OTP
+//! FORGOT PASSWORD - Send reset OTP
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
     
     try {
-        // Security: Don't reveal if email exists or not
         const user = await User.findOne({ email });
         if (!user) {
+            // For security, don't reveal if email exists
             return res.status(200).json({ 
                 message: "If the email exists, a password reset OTP has been sent" 
             });
@@ -244,6 +240,7 @@ const forgotPassword = async (req, res) => {
         const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
         const resetOtpExpiry = Date.now() + 3600000; // 1 hour
         
+        // Store plain OTP (not hashed) for verification
         user.resetOtp = resetOtp;
         user.resetOtpExpiry = resetOtpExpiry;
         await user.save();
@@ -256,24 +253,18 @@ const forgotPassword = async (req, res) => {
             text: `Your password reset OTP is: ${resetOtp}. This OTP will expire in 1 hour.`,
         };
 
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) {
-                console.error("Email send error:", error);
-                return res.status(500).json({ message: "Error sending reset email" });
-            }
+        await transporter.sendMail(mailOptions);
             
-            res.status(200).json({ 
-                message: "If the email exists, a password reset OTP has been sent",
-                email: user.email // Send back email for the reset password page
-            });
+        res.status(200).json({ 
+            message: "If the email exists, a password reset OTP has been sent",
+            email: user.email // Send back email for the reset password page
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Forgot password error:", error);
         res.status(500).json({ message: "Server Error" });
     }
 };
-
 //! VERIFY RESET OTP
 const verifyResetOtp = async (req, res) => {
     const { email, otp } = req.body;
