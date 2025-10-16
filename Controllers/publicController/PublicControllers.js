@@ -34,13 +34,6 @@ const registerUser = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const hashedOtp = await bcrypt.hash(otp, 10);
 
-        await User.create({
-            username,
-            email,
-            password: hashedPassword,
-            otp: hashedOtp,
-            isVerified: false,
-        });
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
@@ -48,18 +41,34 @@ const registerUser = async (req, res) => {
             text: `Welcome to Dhun! Your One-Time Password is: ${otp}`,
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error("Email send error:", error); 
-                return res.status(500).json({ message: "Error sending OTP email" });
-            }
-            console.log("Email sent: " + info.response);
-            res.status(201).json({ message: "Registration successful, please check your email for OTP." });
+        // Use a Promise-based approach for cleaner async/await handling
+        await new Promise((resolve, reject) => {
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    console.error("Email send error:", error);
+                    reject(new Error("Error sending OTP email. Please try again."));
+                } else {
+                    console.log("Email sent: " + info.response);
+                    resolve(info);
+                }
+            });
         });
 
+        // Only create the user if the email was successfully sent
+        await User.create({
+            username,
+            email,
+            password: hashedPassword,
+            otp: hashedOtp,
+            isVerified: false,
+        });
+
+        res.status(201).json({ message: "Registration successful, please check your email for OTP." });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        // Catch errors from `sendMail` promise or `User.create`
+        console.error("Registration process error:", error);
+        res.status(500).json({ message: error.message || "Server Error" });
     }
 };
 
