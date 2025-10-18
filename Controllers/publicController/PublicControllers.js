@@ -43,14 +43,13 @@ const registerUser = async (req, res) => {
 
         // Send the email AFTER creating the record
         const mailOptions = {
-            to: email, 
-            from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
-            subject: `Your Dhun Music Verification Code is ${otp}`,
-            text: `Welcome to Dhun Music! Your verification code is ${otp}. This code is valid for 10 minutes.`,
-            html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><h2>Welcome to Dhun Music!</h2><p>Your verification code is:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${otp}</p><p>This code is valid for 10 minutes.</p></div>`
-        };
-
-        await sgMail.send(mailOptions);
+        to: email,
+  from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
+  subject: `Your Dhun Music verification code`,
+  text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+  html: `<p>Your OTP is <b>${otp}</b>. Valid for 10 minutes.</p>`
+};
+await sgMail.send(mailOptions);
         console.log("✅ OTP email sent and unverified user created for:", email);
         
         res.status(201).json({ message: "Registration successful, please check your email for OTP." });
