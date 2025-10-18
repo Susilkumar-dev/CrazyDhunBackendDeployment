@@ -341,98 +341,84 @@ const sgMail = require('@sendgrid/mail'); // Using SendGrid now
 // Set the SendGrid API Key from your environment variables
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-//! REGISTER USER (Sends OTP) - UPDATED
+
+//! REGISTER USER (Sends OTP) - FINAL LOGIC
 const registerUser = async (req, res) => {
     const { username, email, password } = req.body;
     
-    console.log("📧 Registration attempt:", { username, email });
-    
     try {
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            console.log("❌ User with this email already exists:", email);
-            return res.status(400).json({ message: "User with this email already exists" });
+        // Check if a VERIFIED user already exists.
+        const verifiedUserExists = await User.findOne({ email, isVerified: true });
+        if (verifiedUserExists) {
+            return res.status(400).json({ message: "An account with this email already exists." });
         }
+
+        // If an unverified user exists, we'll overwrite their record for a new attempt.
+        await User.deleteOne({ email, isVerified: false });
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedPassword = await bcrypt.hash(password, 10);
         const hashedOtp = await bcrypt.hash(otp, 10);
+        const otpExpires = Date.now() + 10 * 60 * 1000; // OTP is valid for 10 minutes
 
-        console.log("📨 Sending OTP email via SendGrid...");
-
-        // Define the email message for SendGrid
-        const mailOptions = {
-        to: email, 
-        from: {
-            name: 'Dhun Music', // Add a professional sender name
-            email: process.env.EMAIL_USER // This should be your verified rajususil9@gmail.com
-        },
-        subject: `Your Dhun Music Verification Code is ${otp}`,
-        // Add a plain text version for older email clients
-        text: `Welcome to Dhun Music! Your verification code is ${otp}. This code is valid for 10 minutes.`,
-        // Make the HTML version look much better
-        html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <h2>Welcome to Dhun Music!</h2>
-                <p>Thank you for registering. Please use the following verification code to complete your signup.</p>
-                <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background-color: #f2f2f2; padding: 10px 15px; display: inline-block; border-radius: 5px;">
-                    ${otp}
-                </p>
-                <p>This code is valid for the next 10 minutes.</p>
-                <hr style="border: none; border-top: 1px solid #eee;" />
-                <p style="font-size: 0.9em; color: #777;">If you did not request this email, you can safely ignore it.</p>
-            </div>
-        `,
-    };
-
-    await sgMail.send(mailOptions);
-        console.log("✅ OTP email sent successfully to", email);
 
         await User.create({
             username,
             email,
             password: hashedPassword,
             otp: hashedOtp,
+            otpExpires: otpExpires, 
             isVerified: false,
         });
 
-        console.log("✅ User created in database");
+        // Send the email AFTER creating the record
+        const mailOptions = {
+            to: email, 
+            from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
+            subject: `Your Dhun Music Verification Code is ${otp}`,
+            text: `Welcome to Dhun Music! Your verification code is ${otp}. This code is valid for 10 minutes.`,
+            html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><h2>Welcome to Dhun Music!</h2><p>Your verification code is:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${otp}</p><p>This code is valid for 10 minutes.</p></div>`
+        };
+
+        await sgMail.send(mailOptions);
+        console.log("✅ OTP email sent and unverified user created for:", email);
+        
         res.status(201).json({ message: "Registration successful, please check your email for OTP." });
 
     } catch (error) {
         console.error("❌ Registration error:", error);
-        // SendGrid provides more detailed errors in the response body
-        if (error.response) {
-            console.error("SendGrid Error Body:", error.response.body);
-        }
-        res.status(500).json({ message: error.message || "Server Error" });
+        res.status(500).json({ message: "Server Error" });
     }
 };
 
-//! VERIFY OTP (No changes needed here)
+//! VERIFY OTP - FINAL LOGIC
 const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email, isVerified: false });
+
         if (!user) {
-            return res.status(404).json({ message: "User not found." });
+            return res.status(404).json({ message: "No pending verification found for this email. Please register again." });
         }
-        if (user.isVerified) {
-            return res.status(400).json({ message: "User is already verified." });
+
+        if (user.otpExpires < Date.now()) {
+            await User.deleteOne({ _id: user._id }); // Clean up expired record
+            return res.status(400).json({ message: "OTP has expired. Please register again." });
         }
 
         const isOtpMatch = await bcrypt.compare(otp, user.otp);
         if (!isOtpMatch) {
-            return res.status(400).json({ message: "Invalid OTP." });
+            return res.status(400).json({ message: "The OTP you entered is incorrect." });
         }
 
-
+        // Success! Finalize the user's account.
         user.isVerified = true;
-        user.otp = undefined; 
+        user.otp = undefined;
+        user.otpExpires = undefined; 
         await user.save();
 
         res.status(200).json({
-            message: "Email verified successfully! You can now log in.",
+            message: "Email verified successfully! Welcome to Dhun.",
             _id: user._id,
             username: user.username,
             email: user.email,
