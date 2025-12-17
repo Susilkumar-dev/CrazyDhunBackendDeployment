@@ -7,61 +7,12 @@ const Song = require("../../Models/songModel/songModel.js");
 const bcrypt = require("bcrypt");
 const generateToken = require("../../auth/jwt/generateToken");
 const sgMail = require('@sendgrid/mail'); // Using SendGrid now
-const { sendEmail } = require('../../config/Email');
 
 // Set the SendGrid API Key from your environment variables
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
-// //! REGISTER USER (Sends OTP) - FINAL LOGIC
-// const registerUser = async (req, res) => {
-//     const { username, email, password } = req.body;
-    
-//     try {
-//         // Check if a VERIFIED user already exists.
-//         const verifiedUserExists = await User.findOne({ email, isVerified: true });
-//         if (verifiedUserExists) {
-//             return res.status(400).json({ message: "An account with this email already exists." });
-//         }
-
-//         // If an unverified user exists, we'll overwrite their record for a new attempt.
-//         await User.deleteOne({ email, isVerified: false });
-
-//         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-//         const hashedPassword = await bcrypt.hash(password, 10);
-//         const hashedOtp = await bcrypt.hash(otp, 10);
-//         const otpExpires = Date.now() + 10 * 60 * 1000; // OTP is valid for 10 minutes
-
-
-//         await User.create({
-//             username,
-//             email,
-//             password: hashedPassword,
-//             otp: hashedOtp,
-//             otpExpires: otpExpires,
-//             isVerified: false,
-//         });
-
-//         // Send the email AFTER creating the record
-//         const mailOptions = {
-//         to: email,
-//   from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
-//   subject: `Your Dhun Music verification code`,
-//   text: `Your OTP is ${otp}. Valid for 10 minutes.`,
-//   html: `<p>Your OTP is <b>${otp}</b>. Valid for 10 minutes.</p>`
-// };
-// await sgMail.send(mailOptions);
-//         console.log("✅ OTP email sent and unverified user created for:", email);
-        
-//         res.status(201).json({ message: "Registration successful, please check your email for OTP." });
-
-//     } catch (error) {
-//         console.error("❌ Registration error:", error);
-//         res.status(500).json({ message: "Server Error" });
-//     }
-// };
-
-
+//! REGISTER USER (Sends OTP) - FINAL LOGIC
 const registerUser = async (req, res) => {
     const { username, email, password } = req.body;
     
@@ -80,6 +31,7 @@ const registerUser = async (req, res) => {
         const hashedOtp = await bcrypt.hash(otp, 10);
         const otpExpires = Date.now() + 10 * 60 * 1000; // OTP is valid for 10 minutes
 
+
         await User.create({
             username,
             email,
@@ -89,26 +41,15 @@ const registerUser = async (req, res) => {
             isVerified: false,
         });
 
-        // ✅ REPLACED: Use the new email function
-        const emailSent = await sendEmail(
-            email,
-            'Verify Your Email - Dhun Music',
-            `Your OTP verification code is: ${otp}. This code will expire in 10 minutes.`,
-            `
-            <h2>Welcome to Dhun Music! 🎵</h2>
-            <p>Your verification code is:</p>
-            <h1 style="font-size: 32px; color: #667eea; text-align: center; letter-spacing: 5px;">${otp}</h1>
-            <p>Enter this code in the app to verify your email address.</p>
-            <p><strong>This code expires in 10 minutes.</strong></p>
-            <p>If you didn't request this, please ignore this email.</p>
-            `
-        );
-
-        if (!emailSent) {
-            await User.deleteOne({ email, isVerified: false });
-            return res.status(500).json({ message: "Failed to send verification email. Please try again." });
-        }
-
+        // Send the email AFTER creating the record
+        const mailOptions = {
+        to: email,
+  from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
+  subject: `Your Dhun Music verification code`,
+  text: `Your OTP is ${otp}. Valid for 10 minutes.`,
+  html: `<p>Your OTP is <b>${otp}</b>. Valid for 10 minutes.</p>`
+};
+await sgMail.send(mailOptions);
         console.log("✅ OTP email sent and unverified user created for:", email);
         
         res.status(201).json({ message: "Registration successful, please check your email for OTP." });
@@ -265,7 +206,6 @@ const getSongsByArtist = async (req, res) => {
 };
 
 //! FORGOT PASSWORD - Send reset OTP - UPDATED
-//! FORGOT PASSWORD - Send reset OTP - UPDATED
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
     
@@ -284,23 +224,15 @@ const forgotPassword = async (req, res) => {
         user.resetOtpExpiry = resetOtpExpiry;
         await user.save();
 
-        // ✅ REPLACED: Use the new email function
-        const emailSent = await sendEmail(
-            user.email,
-            'Password Reset - Dhun Music',
-            `Your password reset OTP is: ${resetOtp}. This OTP will expire in 1 hour.`,
-            `
-            <h2>Password Reset Request</h2>
-            <p>You requested to reset your password. Use this OTP:</p>
-            <h1 style="font-size: 32px; color: #667eea; text-align: center; letter-spacing: 5px;">${resetOtp}</h1>
-            <p><strong>This OTP expires in 1 hour.</strong></p>
-            <p>If you didn't request this, please ignore this email.</p>
-            `
-        );
+        // Send email with OTP using SendGrid
+        const mailOptions = {
+            from: process.env.EMAIL_USER, // Your verified sender in SendGrid
+            to: user.email,
+            subject: 'Dhun Music - Password Reset OTP',
+            text: `Your password reset OTP is: ${resetOtp}. This OTP will expire in 1 hour.`,
+        };
 
-        if (!emailSent) {
-            return res.status(500).json({ message: "Failed to send reset email. Please try again." });
-        }
+        await sgMail.send(mailOptions);
             
         res.status(200).json({ 
             message: "If an account with this email exists, a password reset OTP has been sent.",
