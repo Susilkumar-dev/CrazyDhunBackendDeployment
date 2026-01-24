@@ -16,6 +16,31 @@ router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOtp);
 router.post('/reset-password', resetPassword);
 
+
+
+
+// In your public routes
+router.post('/test-email', async (req, res) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: process.env.EMAIL_USER, // Send to yourself
+            subject: 'Test Email from Dhun Music',
+            text: 'This is a test email to verify SMTP configuration.'
+        };
+        
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: 'Test email sent successfully!' });
+    } catch (error) {
+        console.error('Test email error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to send test email',
+            error: error.message 
+        });
+    }
+});
+
 // Song routes
 router.get('/songs', getAllSongs);
 router.get('/songs/language/:language', getSongsByLanguage);
