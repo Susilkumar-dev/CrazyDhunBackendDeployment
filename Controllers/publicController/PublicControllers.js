@@ -1,18 +1,12 @@
-
-
-
-
 const User = require("../../Models/userModel/userModel.js");
 const Song = require("../../Models/songModel/songModel.js");
 const bcrypt = require("bcrypt");
 const generateToken = require("../../auth/jwt/generateToken");
-const sgMail = require('@sendgrid/mail'); // Using SendGrid now
-
-// Set the SendGrid API Key from your environment variables
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+// 👇 Import the Nodemailer transporter
+const transporter = require('../../config/Email.js'); 
 
 
-//! REGISTER USER (Sends OTP) - FINAL LOGIC
+//! REGISTER USER (Sends OTP via Nodemailer)
 const registerUser = async (req, res) => {
     const { username, email, password } = req.body;
     
@@ -23,7 +17,7 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: "An account with this email already exists." });
         }
 
-        // If an unverified user exists, we'll overwrite their record for a new attempt.
+        // If an unverified user exists, delete it so we can start fresh
         await User.deleteOne({ email, isVerified: false });
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -31,7 +25,7 @@ const registerUser = async (req, res) => {
         const hashedOtp = await bcrypt.hash(otp, 10);
         const otpExpires = Date.now() + 10 * 60 * 1000; // OTP is valid for 10 minutes
 
-
+        // Create the user record
         await User.create({
             username,
             email,
@@ -41,26 +35,54 @@ const registerUser = async (req, res) => {
             isVerified: false,
         });
 
-        // Send the email AFTER creating the record
+        // Email Configuration (Using Nodemailer)
         const mailOptions = {
-        to: email,
-  from: { name: 'Dhun Music', email: process.env.EMAIL_USER },
-  subject: `Your Dhun Music verification code`,
-  text: `Your OTP is ${otp}. Valid for 10 minutes.`,
-  html: `<p>Your OTP is <b>${otp}</b>. Valid for 10 minutes.</p>`
-};
-await sgMail.send(mailOptions);
-        console.log("✅ OTP email sent and unverified user created for:", email);
+            from: `"Dhun Music" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Your Dhun Music verification code',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Welcome to Dhun Music! 🎵</h2>
+                    <p>Your verification code is:</p>
+                    <h1 style="color: #4CAF50; letter-spacing: 5px;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
+                </div>
+            `
+        };
         
-        res.status(201).json({ message: "Registration successful, please check your email for OTP." });
+        try {
+            // Send Email
+            await transporter.sendMail(mailOptions);
+            console.log("✅ OTP email sent to:", email);
+            
+            res.status(201).json({ 
+                message: "Registration successful, please check your email for OTP.",
+                email: email 
+            });
+            
+        } catch (emailError) {
+            console.error("❌ Email sending failed:", emailError);
+            
+            // Clean up the user record since email failed
+            await User.deleteOne({ email, isVerified: false });
+            
+            return res.status(500).json({ 
+                message: "Failed to send verification email. Please check your internet or email settings." 
+            });
+        }
 
     } catch (error) {
         console.error("❌ Registration error:", error);
+        
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "Email already exists." });
+        }
+        
         res.status(500).json({ message: "Server Error" });
     }
 };
 
-//! VERIFY OTP - FINAL LOGIC
+//! VERIFY OTP
 const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
     try {
@@ -100,7 +122,7 @@ const verifyOtp = async (req, res) => {
     }
 };
 
-//! LOGIN USER (No changes needed here)
+//! LOGIN USER
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -133,88 +155,18 @@ const loginUser = async (req, res) => {
     }
 };
 
-//! GET ALL SONGS (No changes needed here)
-const getAllSongs = async (req, res) => {
-    try {
-        const { language, genre, mood } = req.query;
-        let filter = {};
-        
-        if (language) filter.language = language;
-        if (genre) filter.genre = genre;
-        if (mood) filter.mood = mood;
-        
-        const songs = await Song.find(filter);
-        res.json(songs);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
-    }
-};
-
-//! GET RECOMMENDED SONGS (No changes needed here)
-const getRecommendedSongs = async (req, res) => {
-    try {
-        const { songId } = req.params;
-        const currentSong = await Song.findById(songId);
-        if (!currentSong) return res.json([]);
-
-        const recommendations = await Song.find({
-            artist: currentSong.artist,
-            _id: { $ne: songId }
-        }).limit(10); 
-
-        res.json(recommendations);
-    } catch (error) {
-        console.error("Recommendation error:", error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-};
-
-//! GET SONGS BY LANGUAGE (No changes needed here)
-const getSongsByLanguage = async (req, res) => {
-    try {
-        const { language } = req.params;
-        const songs = await Song.find({ language: { $regex: new RegExp(`^${language}$`, "i") } });
-        
-        if (!songs || songs.length === 0) {
-            return res.status(404).json({ message: "No songs found for this language" });
-        }
-        
-        res.json(songs);
-    } catch (error) {
-        console.error("Error fetching songs by language:", error);
-        res.status(500).json({ message: "Server Error" });
-    }
-};
-
-//! GET SONGS BY ARTIST (No changes needed here)
-const getSongsByArtist = async (req, res) => {
-  try {
-    const artistName = req.params.artistName;
-    const songs = await Song.find({
-      artist: { $regex: new RegExp(`^${artistName}$`, "i") }
-    });
-
-    if (!songs || songs.length === 0) {
-      return res.status(404).json({ message: "No songs found for this artist" });
-    }
-    res.json(songs);
-  } catch (error) {
-    console.error("Error fetching songs by artist:", error);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
-
-//! FORGOT PASSWORD - Send reset OTP - UPDATED
+//! FORGOT PASSWORD - Send reset OTP (Using Nodemailer)
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
     
     try {
         const user = await User.findOne({ email });
+        
+        // Security: Always return same message to prevent email enumeration
+        const responseMessage = "If an account with this email exists, a password reset OTP has been sent.";
+        
         if (!user) {
-            return res.status(200).json({ 
-                message: "If an account with this email exists, a password reset OTP has been sent." 
-            });
+            return res.status(200).json({ message: responseMessage });
         }
 
         const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -224,18 +176,32 @@ const forgotPassword = async (req, res) => {
         user.resetOtpExpiry = resetOtpExpiry;
         await user.save();
 
-        // Send email with OTP using SendGrid
+        // Send email with OTP using Nodemailer
         const mailOptions = {
-            from: process.env.EMAIL_USER, // Your verified sender in SendGrid
+            from: `"Dhun Music" <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject: 'Dhun Music - Password Reset OTP',
-            text: `Your password reset OTP is: ${resetOtp}. This OTP will expire in 1 hour.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>Password Reset Request</h2>
+                    <p>Your password reset OTP is:</p>
+                    <h1 style="color: #FF5722; letter-spacing: 5px;">${resetOtp}</h1>
+                    <p>This OTP will expire in 1 hour.</p>
+                </div>
+            `
         };
 
-        await sgMail.send(mailOptions);
-            
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log("✅ Password reset OTP sent to:", email);
+        } catch (emailError) {
+            console.error("❌ Email sending failed:", emailError);
+            // Don't expose error details to client, just log it
+            return res.status(500).json({ message: "Failed to send email. Please try again." });
+        }
+
         res.status(200).json({ 
-            message: "If an account with this email exists, a password reset OTP has been sent.",
+            message: responseMessage,
             email: user.email
         });
 
@@ -245,7 +211,7 @@ const forgotPassword = async (req, res) => {
     }
 };
 
-//! VERIFY RESET OTP (No changes needed here)
+//! VERIFY RESET OTP
 const verifyResetOtp = async (req, res) => {
     const { email, otp } = req.body;
     
@@ -270,7 +236,7 @@ const verifyResetOtp = async (req, res) => {
     }
 };
 
-//! RESET PASSWORD (No changes needed here)
+//! RESET PASSWORD
 const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
     
@@ -297,6 +263,78 @@ const resetPassword = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: "Server Error" });
     }
+};
+
+//! GET ALL SONGS
+const getAllSongs = async (req, res) => {
+    try {
+        const { language, genre, mood } = req.query;
+        let filter = {};
+        
+        if (language) filter.language = language;
+        if (genre) filter.genre = genre;
+        if (mood) filter.mood = mood;
+        
+        const songs = await Song.find(filter);
+        res.json(songs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+//! GET RECOMMENDED SONGS
+const getRecommendedSongs = async (req, res) => {
+    try {
+        const { songId } = req.params;
+        const currentSong = await Song.findById(songId);
+        if (!currentSong) return res.json([]);
+
+        const recommendations = await Song.find({
+            artist: currentSong.artist,
+            _id: { $ne: songId }
+        }).limit(10); 
+
+        res.json(recommendations);
+    } catch (error) {
+        console.error("Recommendation error:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+//! GET SONGS BY LANGUAGE
+const getSongsByLanguage = async (req, res) => {
+    try {
+        const { language } = req.params;
+        const songs = await Song.find({ language: { $regex: new RegExp(`^${language}$`, "i") } });
+        
+        if (!songs || songs.length === 0) {
+            return res.status(404).json({ message: "No songs found for this language" });
+        }
+        
+        res.json(songs);
+    } catch (error) {
+        console.error("Error fetching songs by language:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+//! GET SONGS BY ARTIST
+const getSongsByArtist = async (req, res) => {
+  try {
+    const artistName = req.params.artistName;
+    const songs = await Song.find({
+      artist: { $regex: new RegExp(`^${artistName}$`, "i") }
+    });
+
+    if (!songs || songs.length === 0) {
+      return res.status(404).json({ message: "No songs found for this artist" });
+    }
+    res.json(songs);
+  } catch (error) {
+    console.error("Error fetching songs by artist:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
 // Export all the functions

@@ -37,6 +37,8 @@ app.get("/", (req, res) => {
     res.json({ message: "Welcome to the Dhun Music API" });
 });
 
+
+
 //! Start the server
 app.listen(process.env.PORT, () => {
     console.log(`Server started on port ${process.env.PORT}`);

@@ -1,14 +1,21 @@
 const nodemailer = require("nodemailer");
+require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465, // For secure: true, port should be 465
-    secure: true, // Use SSL/TLS
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USER, // Will read 'rajususil45@gmail.com'
+        pass: process.env.EMAIL_PASS, // Will read 'ntok xwef yrff xzsh'
     },
 });
 
-module.exports = transporter;
+// Verify connection configuration
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("❌ Email Server Error: ", error);
+    } else {
+        console.log("✅ Email Server is ready to send messages");
+    }
+});
 
+module.exports = transporter;
