@@ -65,6 +65,8 @@ urouter.put('/profile/update', verifyToken, updateUserProfile);
 urouter.delete('/profile/delete', verifyToken, deleteUserAccount);
 urouter.put('/profile/picture', verifyToken, updateUserPicture);
 
+
+ 
 // ✅ UPDATED ROUTE - ADD UPLOAD MIDDLEWARE (SAME AS ADMIN)
 urouter.post('/songs/request', 
     verifyToken, 

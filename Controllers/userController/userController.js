@@ -3,7 +3,7 @@ const User = require("../../Models/userModel/userModel.js");
 const Song = require("../../Models/songModel/songModel.js");
 const Playlist = require("../../Models/playlistModel/playlistModel.js");
 const PendingSong = require("../../Models/pendingModel/pendingSongModel.js");
-const transporter = require('../../config/Email.js');
+
 const bcrypt = require("bcrypt");
 const cloudinary = require('../../config/cloudinary.js');
 
