@@ -2,7 +2,8 @@ const User = require("../../Models/userModel/userModel.js");
 const Song = require("../../Models/songModel/songModel.js");
 const bcrypt = require("bcrypt");
 const generateToken = require("../../auth/jwt/generateToken");
-const transporter = require("../../config/Email.js");
+const sendEmail = require("../../config/Email.js");
+
 
 //! REGISTER USER (Sends OTP via SendGrid)
 const registerUser = async (req, res) => {
@@ -29,17 +30,17 @@ const registerUser = async (req, res) => {
       isVerified: false,
     });
 
-    await transporter.sendMail({
-      from: `"Dhun Music" <${process.env.EMAIL_FROM}>`,
-      to: email,
-      subject: "Dhun Music Verification Code",
-      html: `
-        <h2>Welcome to Dhun Music 🎵</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>Valid for 10 minutes</p>
-      `,
-    });
+await sendEmail({
+  to: email,
+  subject: "Dhun Music Verification Code",
+  html: `
+    <h2>Welcome to Dhun Music 🎵</h2>
+    <p>Your OTP is:</p>
+    <h1>${otp}</h1>
+    <p>Valid for 10 minutes</p>
+  `,
+});
+
 
     res.status(201).json({
       message: "Registration successful. OTP sent.",
@@ -151,17 +152,16 @@ const forgotPassword = async (req, res) => {
     user.resetOtpExpiry = Date.now() + 60 * 60 * 1000;
     await user.save();
 
-    await transporter.sendMail({
-      from: `"Dhun Music" <${process.env.EMAIL_FROM}>`,
-      to: email,
-      subject: "Dhun Music - Password Reset OTP",
-      html: `
-        <h2>Password Reset Request</h2>
-        <p>Your OTP is:</p>
-        <h1>${resetOtp}</h1>
-        <p>This OTP is valid for 1 hour.</p>
-      `,
-    });
+    await sendEmail({
+  to: email,
+  subject: "Dhun Music - Password Reset OTP",
+  html: `
+    <h2>Password Reset Request</h2>
+    <p>Your OTP is:</p>
+    <h1>${resetOtp}</h1>
+    <p>This OTP is valid for 1 hour.</p>
+  `,
+});
 
     res.status(200).json({ message: responseMessage });
 
