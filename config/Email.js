@@ -1,21 +1,13 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',  // Use 'gmail' service
+  host: "smtp.sendgrid.net",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
-// Test connection
-transporter.verify(function(error, success) {
-  if (error) {
-    console.error('❌ Email transporter error:', error);
-  } else {
-    console.log('✅ Email server is ready to send messages');
-  }
+    user: "apikey",
+    pass: process.env.SENDGRID_API_KEY,
+  },
 });
 
 module.exports = transporter;
