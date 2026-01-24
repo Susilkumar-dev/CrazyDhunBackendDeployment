@@ -2,7 +2,7 @@ const User = require("../../Models/userModel/userModel.js");
 const Song = require("../../Models/songModel/songModel.js");
 const bcrypt = require("bcrypt");
 const generateToken = require("../../auth/jwt/generateToken");
-const transporter = require('../../config/Email.js'); 
+const transporter = require('../../config/Email.js');
 
 //! REGISTER USER (Sends OTP via Nodemailer)
 const registerUser = async (req, res) => {
@@ -59,14 +59,13 @@ const registerUser = async (req, res) => {
             });
             
         } catch (emailError) {
-            console.error("❌ Email sending failed:", emailError.message);
-            console.error("Full error:", emailError);
+            console.error("❌ Email sending failed:", emailError);
             
             // Clean up the user record since email failed
             await User.deleteOne({ email, isVerified: false });
             
             return res.status(500).json({ 
-                message: "Failed to send verification email. Please try again later." 
+                message: "Failed to send verification email. Please check your internet or email settings." 
             });
         }
 
@@ -154,7 +153,7 @@ const loginUser = async (req, res) => {
     }
 };
 
-//! FORGOT PASSWORD - Send reset OTP
+//! FORGOT PASSWORD - Send reset OTP (Using Nodemailer)
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
     
@@ -175,7 +174,7 @@ const forgotPassword = async (req, res) => {
         user.resetOtpExpiry = resetOtpExpiry;
         await user.save();
 
-        // Send email with OTP
+        // Send email with OTP using Nodemailer
         const mailOptions = {
             from: `"Dhun Music" <${process.env.EMAIL_USER}>`,
             to: user.email,
@@ -195,6 +194,7 @@ const forgotPassword = async (req, res) => {
             console.log("✅ Password reset OTP sent to:", email);
         } catch (emailError) {
             console.error("❌ Email sending failed:", emailError);
+            // Don't expose error details to client, just log it
             return res.status(500).json({ message: "Failed to send email. Please try again." });
         }
 
@@ -267,7 +267,7 @@ const resetPassword = async (req, res) => {
 const getAllSongs = async (req, res) => {
     try {
         const { language, genre, mood } = req.query;
-        let filter = { status: true }; // Only get active songs
+        let filter = {};
         
         if (language) filter.language = language;
         if (genre) filter.genre = genre;
@@ -290,8 +290,7 @@ const getRecommendedSongs = async (req, res) => {
 
         const recommendations = await Song.find({
             artist: currentSong.artist,
-            _id: { $ne: songId },
-            status: true
+            _id: { $ne: songId }
         }).limit(10); 
 
         res.json(recommendations);
@@ -305,10 +304,7 @@ const getRecommendedSongs = async (req, res) => {
 const getSongsByLanguage = async (req, res) => {
     try {
         const { language } = req.params;
-        const songs = await Song.find({ 
-            language: { $regex: new RegExp(`^${language}$`, "i") },
-            status: true 
-        });
+        const songs = await Song.find({ language: { $regex: new RegExp(`^${language}$`, "i") } });
         
         if (!songs || songs.length === 0) {
             return res.status(404).json({ message: "No songs found for this language" });
@@ -326,8 +322,7 @@ const getSongsByArtist = async (req, res) => {
   try {
     const artistName = req.params.artistName;
     const songs = await Song.find({
-      artist: { $regex: new RegExp(`^${artistName}$`, "i") },
-      status: true
+      artist: { $regex: new RegExp(`^${artistName}$`, "i") }
     });
 
     if (!songs || songs.length === 0) {
