@@ -1,48 +1,39 @@
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
 
-// Create transporter with better timeout settings
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-  // Add these to prevent timeout issues
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-  debug: true, // Enable debug output
-});
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    console.log(`📧 Attempting to send email to: ${to}`);
-    console.log(`Using SMTP server: smtp-relay.brevo.com:587`);
-    
-    const info = await transporter.sendMail({
-      from: `"Dhun Music 🎵" <${process.env.BREVO_USER}>`,
+    console.log(`📧 Sending email to: ${to}`);
+
+    const msg = {
       to,
+      from: {
+        name: "Dhun Music 🎵",
+        email: process.env.EMAIL_FROM,
+      },
       subject,
       html,
-    });
+    };
+
+    const response = await sgMail.send(msg);
 
     console.log("✅ Email sent successfully!");
-    console.log("Message ID:", info.messageId);
-    console.log("Response:", info.response);
-    
-    return info;
+    console.log("Status Code:", response[0].statusCode);
+    console.log("Headers:", response[0].headers);
+
+    return response;
   } catch (error) {
-    console.error("❌ Email Error Details:");
-    console.error("Code:", error.code);
-    console.error("Command:", error.command);
-    console.error("Message:", error.message);
-    
+    console.error("❌ Email Error:");
+
     if (error.response) {
-      console.error("SMTP Response:", error.response);
+      console.error("Body:", error.response.body);
+      console.error("Headers:", error.response.headers);
+    } else {
+      console.error(error.message);
     }
-    
+
     throw new Error("Email not sent: " + error.message);
   }
 };
