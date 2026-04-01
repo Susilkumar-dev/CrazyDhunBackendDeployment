@@ -1,40 +1,32 @@
-const sgMail = require("@sendgrid/mail");
+const nodemailer = require("nodemailer");
 
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
+  },
+});
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    console.log(`📧 Sending email to: ${to}`);
+    console.log("📧 Sending email to:", to);
 
-    const msg = {
+    const info = await transporter.sendMail({
+      from: `"Dhun Music 🎵" <${process.env.BREVO_USER}>`,
       to,
-      from: {
-        name: "Dhun Music 🎵",
-        email: process.env.EMAIL_FROM,
-      },
       subject,
       html,
-    };
+    });
 
-    const response = await sgMail.send(msg);
+    console.log("✅ Email sent:", info.messageId);
+    return info;
 
-    console.log("✅ Email sent successfully!");
-    console.log("Status Code:", response[0].statusCode);
-    console.log("Headers:", response[0].headers);
-
-    return response;
   } catch (error) {
-    console.error("❌ Email Error:");
-
-    if (error.response) {
-      console.error("Body:", error.response.body);
-      console.error("Headers:", error.response.headers);
-    } else {
-      console.error(error.message);
-    }
-
-    throw new Error("Email not sent: " + error.message);
+    console.error("❌ Email Error:", error.message);
+    throw new Error("Email not sent");
   }
 };
 
