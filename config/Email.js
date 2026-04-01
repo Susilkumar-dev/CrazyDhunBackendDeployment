@@ -9,6 +9,8 @@ const transporter = nodemailer.createTransport({
     pass: process.env.BREVO_PASS,
   },
   connectionTimeout: 10000,
+  greetingTimeout: 5000,
+  socketTimeout: 10000,
 });
 
 const sendEmail = async ({ to, subject, html }) => {
