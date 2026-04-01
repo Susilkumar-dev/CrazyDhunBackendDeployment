@@ -8,6 +8,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.BREVO_USER,
     pass: process.env.BREVO_PASS,
   },
+  connectionTimeout: 10000,
 });
 
 const sendEmail = async ({ to, subject, html }) => {
@@ -26,7 +27,7 @@ const sendEmail = async ({ to, subject, html }) => {
 
   } catch (error) {
     console.error("❌ Email Error:", error.message);
-    throw new Error("Email not sent");
+    return null; // IMPORTANT FIX
   }
 };
 
