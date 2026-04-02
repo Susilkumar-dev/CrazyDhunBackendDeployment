@@ -21,5 +21,8 @@ const sendEmail = async ({ to, subject, html }) => {
     console.log("✅ Email sent:", res.data);
   } catch (error) {
     console.error("❌ Email API Error:", error.response?.data || error.message);
+    throw error; // optional but useful
   }
 };
+
+module.exports = sendEmail;
