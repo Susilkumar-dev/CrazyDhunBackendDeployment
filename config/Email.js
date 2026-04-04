@@ -36,3 +36,4 @@ const sendEmail = async ({ to, subject, html }) => {
 };
 
 module.exports = sendEmail;
+3
